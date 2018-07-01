@@ -30,7 +30,7 @@ class GrpcServerHandlerTests extends RpcServerTestSuite {
 
   import implicits._
 
-  val handler: GrpcServerHandler[ConcurrentMonad] = new GrpcServerHandler[ConcurrentMonad]
+  val handler = GrpcServerHandler[ConcurrentMonad]
 
   "GrpcServer.Handler" should {
 
