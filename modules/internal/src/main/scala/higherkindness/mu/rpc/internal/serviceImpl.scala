@@ -17,7 +17,10 @@
 package higherkindness.mu.rpc
 package internal
 
+import java.io.FileWriter
+
 import higherkindness.mu.rpc.protocol._
+
 import scala.reflect.macros.blackbox
 
 // $COVERAGE-OFF$
@@ -637,6 +640,9 @@ object serviceImpl {
         List(serviceDef, enrichedCompanion)
       case _ => sys.error("@service-annotated definition must be a trait or abstract class")
     }
+    val writer = new FileWriter(s"${result.head.asInstanceOf[ClassDef].name}.scala")
+    result.foreach(line => writer.write(line.toString()))
+    writer.close()
     c.Expr(Block(result, Literal(Constant(()))))
   }
 }
