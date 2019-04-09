@@ -8,7 +8,7 @@ import higherkindness.mu.rpc.internal.client.{unaryCalls => unaryClientcalls}
 import higherkindness.mu.rpc.internal.server.{unaryCalls => unaryServercalls}
 import higherkindness.mu.rpc.internal.service.GRPCServiceDefBuilder
 import higherkindness.mu.rpc.protocol.Empty
-import io.grpc.stub.ServerCalls
+import io.grpc.stub.{AbstractStub, ServerCalls}
 import io.grpc.{CallOptions, Channel, ManagedChannel, MethodDescriptor, ServerServiceDefinition}
 
 import scala.language.higherKinds
@@ -102,7 +102,7 @@ object PersonServiceAvroExpanded {
   @SuppressWarnings(Array("org.wartremover.warts.DefaultArguments")) class Client[F[_]](
       channel: Channel,
       options: CallOptions)(implicit CE: ConcurrentEffect[F], CS: ContextShift[F])
-      extends _root_.io.grpc.stub.AbstractStub[Client[F]](channel, options)
+      extends AbstractStub[Client[F]](channel, options)
       with PersonServiceAvroExpanded[F] {
 
     override def build(channel: Channel, options: CallOptions): Client[F] =
