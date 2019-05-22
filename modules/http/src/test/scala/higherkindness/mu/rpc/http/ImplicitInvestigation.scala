@@ -16,6 +16,7 @@
 
 package higherkindness.mu.rpc.http
 
+import cats.data.Kleisli
 import cats.{Applicative, MonadError}
 import cats.effect.{IO, _}
 import cats.syntax.applicative._
@@ -66,17 +67,40 @@ class ImplicitInvestigationRestService[F[_]](
 
   implicit private val entityDecoderPing: EntityDecoder[F, Ping] = jsonOf[F, Ping]
 
-  def doPingPartialFunc: PartialFunction[Request[F], F[Response[F]]] = {
-    case msg @ POST -> Root / "doPing" =>
-      msg.as[Ping].flatMap(request => Ok(handler.doPing(request).map(_.asJson)))
+  // Http4s Request -> Domain message /////
+
+  val doPingRoute: PartialFunction[Request[F], F[Ping]] = {
+    case msg @ POST -> Root / "doPing" => msg.as[Ping]
   }
 
-  def getAnotherPartialFunc: PartialFunction[Request[F], F[Response[F]]] = {
-    case GET -> Root / "getAnother" => Ok(handler.getAnother(Empty).map(_.asJson))
+  val getAnotherRoute: PartialFunction[Request[F], F[Empty.type]] = {
+    case msg @ GET -> Root / "getAnother" => Empty.pure
   }
+
+  // Response domain object -> Http4s Response //
+
+  val applyPongToResponse: Kleisli[F, Pong, Response[F]] = Kleisli { pong =>
+    Ok(pong.asJson)
+  }
+
+  val applyAnotherToResponse: Kleisli[F, Another, Response[F]] = Kleisli { another =>
+    Ok(another.asJson)
+  }
+
+  // Compose Http4s Request -> Domain message -> Response domain object -> Http4s Response
+
+  val routeForPingPong: PartialFunction[Request[F], F[Response[F]]] =
+    doPingRoute.andThen(_.flatMap(handler.doPing)).andThen(_.flatMap(applyPongToResponse.run))
+
+  val routeForAnother: PartialFunction[Request[F], F[Response[F]]] =
+    getAnotherRoute
+      .andThen(_.flatMap(handler.getAnother))
+      .andThen(_.flatMap(applyAnotherToResponse.run))
+
+  /////////////////////////
 
   def service: HttpRoutes[F] = HttpRoutes.of[F] {
-    doPingPartialFunc orElse getAnotherPartialFunc
+    routeForPingPong orElse routeForAnother
   }
 
 }
@@ -130,7 +154,7 @@ class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
       response.unsafeRunSync() shouldBe Pong(2)
     }
 
-    "work for getPong" in {
+    "work for getAnother" in {
       val response: IO[Another] = BlazeClientBuilder[IO](ec).resource.use(client.getAnother(_))
 
       response.unsafeRunSync() shouldBe Another("Yes")
