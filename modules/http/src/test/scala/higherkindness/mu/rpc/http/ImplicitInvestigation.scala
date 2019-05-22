@@ -62,47 +62,53 @@ class ImplicitInvestigationRestService[F[_]](
     decoderPing: Decoder[Ping],
     encoderPong: Encoder[Pong],
     encoderAnother: Encoder[Another],
+    doPingRoute: PartialFunction[Request[F], F[Ping]],
+    applyPongToResponse: Kleisli[F, Pong, Response[F]],
+    getAnotherRoute: PartialFunction[Request[F], F[Empty.type]],
+    applyAnotherToResponse: Kleisli[F, Another, Response[F]],
     F_better_name_please: Sync[F])
     extends Http4sDsl[F] {
 
-  implicit private val entityDecoderPing: EntityDecoder[F, Ping] = jsonOf[F, Ping]
-
-  // Http4s Request -> Domain message /////
-
-  val doPingRoute: PartialFunction[Request[F], F[Ping]] = {
-    case msg @ POST -> Root / "doPing" => msg.as[Ping]
-  }
-
-  val getAnotherRoute: PartialFunction[Request[F], F[Empty.type]] = {
-    case msg @ GET -> Root / "getAnother" => Empty.pure
-  }
-
-  // Response domain object -> Http4s Response //
-
-  val applyPongToResponse: Kleisli[F, Pong, Response[F]] = Kleisli { pong =>
-    Ok(pong.asJson)
-  }
-
-  val applyAnotherToResponse: Kleisli[F, Another, Response[F]] = Kleisli { another =>
-    Ok(another.asJson)
-  }
-
-  // Compose Http4s Request -> Domain message -> Response domain object -> Http4s Response
-
   val routeForPingPong: PartialFunction[Request[F], F[Response[F]]] =
-    doPingRoute.andThen(_.flatMap(handler.doPing)).andThen(_.flatMap(applyPongToResponse.run))
+    doPingRoute
+      .andThen(_.flatMap(handler.doPing))
+      .andThen(_.flatMap(applyPongToResponse.run))
 
   val routeForAnother: PartialFunction[Request[F], F[Response[F]]] =
     getAnotherRoute
       .andThen(_.flatMap(handler.getAnother))
       .andThen(_.flatMap(applyAnotherToResponse.run))
 
-  /////////////////////////
-
   def service: HttpRoutes[F] = HttpRoutes.of[F] {
     routeForPingPong orElse routeForAnother
   }
 
+}
+
+object Http4sRoutesAndResponders extends Http4sDsl[IO] {
+
+  // Ping/pong
+  implicit def doPingRoute(implicit entityDecoderPing: EntityDecoder[IO, Ping]): PartialFunction[
+    Request[IO],
+    IO[Ping]] = {
+    case msg @ POST -> Root / "doPing" => msg.as[Ping]
+  }
+
+  implicit def applyPongToResponse(
+      implicit encoderPong: Encoder[Pong]): Kleisli[IO, Pong, Response[IO]] = Kleisli { pong =>
+    Ok(pong.asJson)
+  }
+
+  //Another
+  implicit val getAnotherRoute: PartialFunction[Request[IO], IO[Empty.type]] = {
+    case msg @ GET -> Root / "getAnother" => IO.pure(Empty)
+  }
+
+  implicit def applyAnotherToResponse(
+      implicit encoderAnother: Encoder[Another]): Kleisli[IO, Another, Response[IO]] = Kleisli {
+    another =>
+      Ok(another.asJson)
+  }
 }
 
 class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
@@ -121,14 +127,23 @@ class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
       decoderPing: _root_.io.circe.Decoder[Ping],
       encoderPong: _root_.io.circe.Encoder[Pong],
       encoderAnother: _root_.io.circe.Encoder[Another],
+      doPingRoute: PartialFunction[Request[F], F[Ping]],
+      applyPongToResponse: Kleisli[F, Pong, Response[F]],
+      getAnotherRoute: PartialFunction[Request[F], F[Empty.type]],
+      applyAnotherToResponse: Kleisli[F, Another, Response[F]],
       F: _root_.cats.effect.Sync[F]): _root_.higherkindness.mu.http.protocol.RouteMap[F] =
     _root_.higherkindness.mu.http.protocol
       .RouteMap[F]("ImplicitInvestigation", new ImplicitInvestigationRestService[F]().service)
 
   // END MACRO GENERATED
 
+  import Http4sRoutesAndResponders._
+
   val implicitInvestigationRoute: RouteMap[IO] = {
     import _root_.io.circe.generic.auto._
+
+    implicit val entityDecoderPing: EntityDecoder[IO, Ping] = jsonOf[IO, Ping]
+
     routeCreator[IO]
   }
 
