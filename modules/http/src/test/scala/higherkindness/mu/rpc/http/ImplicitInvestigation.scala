@@ -25,7 +25,7 @@ import higherkindness.mu.rpc.protocol._
 import higherkindness.mu.http.protocol._
 import higherkindness.mu.rpc.common.RpcBaseTestSuite
 import io.circe.{Decoder, Encoder}
-import org.http4s.{EntityDecoder, HttpRoutes, Uri}
+import org.http4s.{EntityDecoder, HttpRoutes, Request, Response, Uri}
 import org.scalatest._
 import io.circe.syntax._
 import org.http4s.dsl._
@@ -66,11 +66,17 @@ class ImplicitInvestigationRestService[F[_]](
 
   implicit private val entityDecoderPing: EntityDecoder[F, Ping] = jsonOf[F, Ping]
 
-  def service = HttpRoutes.of[F] {
+  def doPingPartialFunc: PartialFunction[Request[F], F[Response[F]]] = {
     case msg @ POST -> Root / "doPing" =>
       msg.as[Ping].flatMap(request => Ok(handler.doPing(request).map(_.asJson)))
+  }
 
-    case msg @ GET -> Root / "getAnother" => Ok(handler.getAnother(Empty).map(_.asJson))
+  def getAnotherPartialFunc: PartialFunction[Request[F], F[Response[F]]] = {
+    case GET -> Root / "getAnother" => Ok(handler.getAnother(Empty).map(_.asJson))
+  }
+
+  def service: HttpRoutes[F] = HttpRoutes.of[F] {
+    doPingPartialFunc orElse getAnotherPartialFunc
   }
 
 }
