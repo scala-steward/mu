@@ -38,10 +38,14 @@ import org.http4s.server.blaze.BlazeServerBuilder
 
 @message final case class Pong(i: Int)
 
+@message final case class Another(s: String)
+
 @service(Avro) trait ImplicitInvestigation[F[_]] {
 
   // only including @http for the client. The server has been unrolled below
   @http def doPing(request: Ping): F[Pong]
+
+  @http def getAnother(request: Empty.type): F[Another]
 
 }
 
@@ -49,6 +53,8 @@ class ImplicitInvestigationHandler[F[_]: Applicative](implicit F: MonadError[F, 
     extends ImplicitInvestigation[F] {
 
   def doPing(ping: Ping): F[Pong] = Pong(ping.i + 1).pure
+
+  def getAnother(request: Empty.type): F[Another] = Another("Yes").pure
 }
 
 class ImplicitInvestigationRestService[F[_]](
@@ -64,6 +70,7 @@ class ImplicitInvestigationRestService[F[_]](
     case msg @ POST -> Root / "doPing" =>
       msg.as[Ping].flatMap(request => Ok(handler.doPing(request).map(_.asJson)))
 
+    case msg @ GET -> Root / "getAnother" => Ok(handler.getAnother(Empty).map(_.asJson))
   }
 
 }
@@ -105,10 +112,16 @@ class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
 
     val client = ImplicitInvestigation.httpClient[IO](serviceUri)
 
-    "work" in {
+    "work for doPing" in {
       val response: IO[Pong] = BlazeClientBuilder[IO](ec).resource.use(client.doPing(Ping(1)))
 
       response.unsafeRunSync() shouldBe Pong(2)
+    }
+
+    "work for getPong" in {
+      val response: IO[Another] = BlazeClientBuilder[IO](ec).resource.use(client.getAnother(_))
+
+      response.unsafeRunSync() shouldBe Another("Yes")
     }
 
   }
