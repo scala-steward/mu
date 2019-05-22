@@ -301,7 +301,8 @@ object ProjectPlugin extends AutoPlugin {
   }
 
   override def projectSettings: Seq[Def.Setting[_]] =
-    sharedReleaseProcess ++ warnUnusedImport ++ Seq(
+    sharedReleaseProcess ++ Seq(
+//    sharedReleaseProcess ++ warnUnusedImport ++ Seq(
       description := "mu RPC is a purely functional library for " +
         "building RPC endpoint based services with support for RPC and HTTP/2",
       startYear := Some(2017),

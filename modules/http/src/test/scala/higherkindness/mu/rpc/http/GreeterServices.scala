@@ -26,6 +26,7 @@ import higherkindness.mu.http.protocol._
 // We don't actually need to split the various streaming types into their own services,
 // but this allows for more specific dependencies and type constraints (Sync, Async, Effect...) in their implementations.
 
+// NM This is 'MyService[F[_]]'
 @service(Avro) trait UnaryGreeter[F[_]] {
 
   @http def getHello(request: Empty.type): F[HelloResponse]
@@ -33,12 +34,12 @@ import higherkindness.mu.http.protocol._
   @http def sayHello(request: HelloRequest): F[HelloResponse]
 }
 
-import fs2.Stream
-@service(Avro) trait Fs2Greeter[F[_]] {
-
-  @http def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse]
-
-  @http def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse]
-
-  @http def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse]
-}
+//import fs2.Stream
+//@service(Avro) trait Fs2Greeter[F[_]] {
+//
+//  @http def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse]
+//
+//  @http def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse]
+//
+//  @http def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse]
+//}

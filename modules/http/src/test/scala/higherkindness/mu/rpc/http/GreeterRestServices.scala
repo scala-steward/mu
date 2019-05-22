@@ -47,28 +47,28 @@ class UnaryGreeterRestService[F[_]: Sync](
   }
 }
 
-class Fs2GreeterRestService[F[_]: Sync](
-    implicit handler: Fs2Greeter[F],
-    decoderHelloRequest: io.circe.Decoder[HelloRequest],
-    encoderHelloResponse: io.circe.Encoder[HelloResponse])
-    extends Http4sDsl[F] {
-
-  private implicit val requestDecoder: EntityDecoder[F, HelloRequest] = jsonOf[F, HelloRequest]
-
-  def service: HttpRoutes[F] = HttpRoutes.of[F] {
-
-    case msg @ POST -> Root / "sayHellos" =>
-      val requests = msg.asStream[HelloRequest]
-      Ok(handler.sayHellos(requests).map(_.asJson))
-
-    case msg @ POST -> Root / "sayHelloAll" =>
-      for {
-        request   <- msg.as[HelloRequest]
-        responses <- Ok(handler.sayHelloAll(request).asJsonEither)
-      } yield responses
-
-    case msg @ POST -> Root / "sayHellosAll" =>
-      val requests = msg.asStream[HelloRequest]
-      Ok(handler.sayHellosAll(requests).asJsonEither)
-  }
-}
+//class Fs2GreeterRestService[F[_]: Sync](
+//    implicit handler: Fs2Greeter[F],
+//    decoderHelloRequest: io.circe.Decoder[HelloRequest],
+//    encoderHelloResponse: io.circe.Encoder[HelloResponse])
+//    extends Http4sDsl[F] {
+//
+//  private implicit val requestDecoder: EntityDecoder[F, HelloRequest] = jsonOf[F, HelloRequest]
+//
+//  def service: HttpRoutes[F] = HttpRoutes.of[F] {
+//
+//    case msg @ POST -> Root / "sayHellos" =>
+//      val requests = msg.asStream[HelloRequest]
+//      Ok(handler.sayHellos(requests).map(_.asJson))
+//
+//    case msg @ POST -> Root / "sayHelloAll" =>
+//      for {
+//        request   <- msg.as[HelloRequest]
+//        responses <- Ok(handler.sayHelloAll(request).asJsonEither)
+//      } yield responses
+//
+//    case msg @ POST -> Root / "sayHellosAll" =>
+//      val requests = msg.asStream[HelloRequest]
+//      Ok(handler.sayHellosAll(requests).asJsonEither)
+//  }
+//}

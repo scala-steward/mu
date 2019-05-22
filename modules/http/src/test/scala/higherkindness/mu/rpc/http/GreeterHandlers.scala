@@ -33,26 +33,27 @@ class UnaryGreeterHandler[F[_]: Applicative](implicit F: MonadError[F, Throwable
     case "SRE" => F.raiseError(INVALID_ARGUMENT.withDescription("SRE").asRuntimeException)
     case "RTE" => F.raiseError(new IllegalArgumentException("RTE"))
     case "TR"  => throw new IllegalArgumentException("Thrown")
-    case other => HelloResponse(other).pure
+
+    case other => HelloResponse(other.reverse).pure
   }
 
 }
 
-class Fs2GreeterHandler[F[_]: Sync] extends Fs2Greeter[F] {
-
-  import fs2.Stream
-
-  def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse] =
-    requests.compile.fold(HelloResponse("")) {
-      case (response, request) =>
-        HelloResponse(
-          if (response.hello.isEmpty) request.hello else s"${response.hello}, ${request.hello}")
-    }
-
-  def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse] =
-    if (request.hello.isEmpty) Stream.raiseError(new IllegalArgumentException("empty greeting"))
-    else Stream(HelloResponse(request.hello), HelloResponse(request.hello))
-
-  def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse] =
-    requests.map(request => HelloResponse(request.hello))
-}
+//class Fs2GreeterHandler[F[_]: Sync] extends Fs2Greeter[F] {
+//
+//  import fs2.Stream
+//
+//  def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse] =
+//    requests.compile.fold(HelloResponse("")) {
+//      case (response, request) =>
+//        HelloResponse(
+//          if (response.hello.isEmpty) request.hello else s"${response.hello}, ${request.hello}")
+//    }
+//
+//  def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse] =
+//    if (request.hello.isEmpty) Stream.raiseError(new IllegalArgumentException("empty greeting"))
+//    else Stream(HelloResponse(request.hello), HelloResponse(request.hello))
+//
+//  def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse] =
+//    requests.map(request => HelloResponse(request.hello))
+//}
