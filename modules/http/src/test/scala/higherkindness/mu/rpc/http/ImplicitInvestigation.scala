@@ -27,7 +27,6 @@ import higherkindness.mu.rpc.common.RpcBaseTestSuite
 import io.circe.{Decoder, Encoder}
 import org.http4s.{EntityDecoder, HttpRoutes, Uri}
 import org.scalatest._
-import io.circe.generic.auto._
 import io.circe.syntax._
 import org.http4s.dsl._
 import org.http4s.circe._
@@ -61,6 +60,7 @@ class ImplicitInvestigationRestService[F[_]](
     implicit handler: ImplicitInvestigationHandler[F],
     decoderPing: Decoder[Ping],
     encoderPong: Encoder[Pong],
+    encoderAnother: Encoder[Another],
     F_better_name_please: Sync[F])
     extends Http4sDsl[F] {
 
@@ -90,13 +90,17 @@ class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
       implicit handler: ImplicitInvestigationHandler[F],
       decoderPing: _root_.io.circe.Decoder[Ping],
       encoderPong: _root_.io.circe.Encoder[Pong],
+      encoderAnother: _root_.io.circe.Encoder[Another],
       F: _root_.cats.effect.Sync[F]): _root_.higherkindness.mu.http.protocol.RouteMap[F] =
     _root_.higherkindness.mu.http.protocol
       .RouteMap[F]("ImplicitInvestigation", new ImplicitInvestigationRestService[F]().service)
 
   // END MACRO GENERATED
 
-  val implicitInvestigationRoute: RouteMap[IO] = routeCreator[IO]
+  val implicitInvestigationRoute: RouteMap[IO] = {
+    import _root_.io.circe.generic.auto._
+    routeCreator[IO]
+  }
 
   val ec                            = scala.concurrent.ExecutionContext.Implicits.global
   implicit val cs: ContextShift[IO] = IO.contextShift(ec)
@@ -109,6 +113,8 @@ class ImplicitInvestigationTest extends RpcBaseTestSuite with BeforeAndAfter {
   after(serverTask.cancel)
 
   "This test" should {
+
+    import _root_.io.circe.generic.auto._
 
     val client = ImplicitInvestigation.httpClient[IO](serviceUri)
 
