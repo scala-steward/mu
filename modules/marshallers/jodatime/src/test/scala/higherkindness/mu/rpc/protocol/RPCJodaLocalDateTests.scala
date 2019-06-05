@@ -27,6 +27,7 @@ import higherkindness.mu.rpc.common._
 import higherkindness.mu.rpc.testing.servers.withServerChannel
 import io.grpc.{ManagedChannel, ServerServiceDefinition}
 import org.scalacheck.Arbitrary
+import org.scalacheck.Gen.option
 import org.scalatest._
 import org.scalacheck.Prop._
 import org.scalatestplus.scalacheck.Checkers
@@ -54,6 +55,7 @@ class RPCJodaLocalDateTests extends RpcBaseTestSuite with BeforeAndAfterAll with
       trait Def[F[_]] {
         def jodaLocalDateProto(date: LocalDate): F[LocalDate]
         def jodaLocalDateReqProto(request: Request): F[Response]
+        def optionalJodaLocalDateProto(date: Option[LocalDate]): F[Option[LocalDate]]
       }
     }
 
@@ -80,6 +82,7 @@ class RPCJodaLocalDateTests extends RpcBaseTestSuite with BeforeAndAfterAll with
       def jodaLocalDateProto(date: LocalDate): F[LocalDate] = date.pure
       def jodaLocalDateReqProto(request: Request): F[Response] =
         Response(request.date, request.label, check = true).pure
+      def optionalJodaLocalDateProto(date: Option[LocalDate]): F[Option[LocalDate]] = date.pure
 
       def jodaLocalDateAvro(date: LocalDate): F[LocalDate] = date.pure
       def jodaLocalDateReqAvro(request: Request): F[Response] =
@@ -133,6 +136,21 @@ class RPCJodaLocalDateTests extends RpcBaseTestSuite with BeforeAndAfterAll with
                 s,
                 check = true
               )
+          }
+        }
+
+      }
+    }
+
+    "be able to serialize and deserialize Option[joda.Time.LocalDate] using proto format" in {
+
+      withClient(
+        ProtobufService.Def.bindService[ConcurrentMonad],
+        ProtobufService.Def.clientFromChannel[ConcurrentMonad](_)) { client =>
+        check {
+          forAll(option(genDateTimeWithinRange(from, range))) { odt: Option[DateTime] =>
+            val oDate = odt.map(_.toLocalDate)
+            client.optionalJodaLocalDateProto(oDate).unsafeRunSync() == oDate
           }
         }
 
