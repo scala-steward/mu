@@ -428,11 +428,7 @@ object serviceImpl {
         }
       }
 
-      case class HttpOperation(
-          operation: Operation,
-          httpMethod: String,
-          prefix: String,
-          operationName: String) {
+      case class HttpOperation(operation: Operation, httpMethod: String, path: Tree) {
 
         import operation._
 
@@ -568,29 +564,30 @@ object serviceImpl {
         }
 
         val withOutInputPattern =
-          pq"_root_.org.http4s.Method.$method -> _root_.org.http4s.dsl.impl.Root / ${operation.name.toString}"
+          pq"_root_.org.http4s.Method.$method -> $path"
 
-        val withInputPattern =
-          pq"msg @ _root_.org.http4s.Method.$method -> _root_.org.http4s.dsl.impl.Root / ${operation.name.toString}"
+//        val withInputPattern =
+//          pq"msg @ _root_.org.http4s.Method.$method -> $path"
 
         val toRouteTree: Tree = httpMethod match {
-          case "GET"     => cq"$withOutInputPattern => $routeTypology"
-          case "OPTIONS" => cq"$withOutInputPattern => $routeTypology"
-          case "HEAD"    => cq"$withOutInputPattern => $routeTypology"
-          case "TRACE"   => cq"$withOutInputPattern => $routeTypology"
-          case "CONNECT" => cq"$withOutInputPattern => $routeTypology"
-          case "PUT"     => cq"$withInputPattern => $routeTypology"
-          case "PATCH"   => cq"$withInputPattern => $routeTypology"
-          case "DELETE"  => cq"$withInputPattern => $routeTypology"
-          case "POST"    => cq"$withInputPattern => $routeTypology"
-          case _         => cq"$withInputPattern => $routeTypology"
+          case "GET" => cq"$withOutInputPattern => $routeTypology"
+//          case "OPTIONS" => cq"$withOutInputPattern => $routeTypology"
+//          case "HEAD"    => cq"$withOutInputPattern => $routeTypology"
+//          case "TRACE"   => cq"$withOutInputPattern => $routeTypology"
+//          case "CONNECT" => cq"$withOutInputPattern => $routeTypology"
+//          case "PUT"     => cq"$withInputPattern => $routeTypology"
+//          case "PATCH"   => cq"$withInputPattern => $routeTypology"
+//          case "DELETE"  => cq"$withInputPattern => $routeTypology"
+//          case "POST"    => cq"$withInputPattern => $routeTypology"
+//          case _         => cq"$withInputPattern => $routeTypology"
         }
 
       }
 
       val operations: List[HttpOperation] = for {
-        d      <- rpcDefs.collect { case x if findAnnotation(x.mods, "http").isDefined => x }
-        args   <- findAnnotation(d.mods, "http").collect({ case Apply(_, args) => args }).toList
+        d    <- rpcDefs.collect { case x if findAnnotation(x.mods, "http4s").isDefined => x }
+        args <- findAnnotation(d.mods, "http4s").collect({ case Apply(_, args) => args }).toList
+        _ = println(args)
         params <- d.vparamss
         _ = require(params.length == 1, s"RPC call ${d.name} has more than one request parameter")
         p <- params.headOption.toList
@@ -598,10 +595,18 @@ object serviceImpl {
         _ = if (op.isMonixObservable)
           sys.error(
             "Monix.Observable is not compatible with streaming services. Please consider using Fs2.Stream instead.")
-      } yield HttpOperation(op, getHttpMacroParam(args, 0, "POST"), "", "")
+      } yield
+        HttpOperation(
+          op,
+          getHttpMacroParam(args, 0, "POST"),
+          getRouteMacroParam(args, 1, q"_root_.org.http4s.dsl.impl.Root"))
 
-      private def getHttpMacroParam(params: List[Tree], pos: Int, d: String): String =
-        if (params.isDefinedAt(pos)) params(pos).toString else d
+      private def getHttpMacroParam(params: List[Tree], pos: Int, default: String): String =
+        if (params.isDefinedAt(pos)) params(pos).toString else default
+
+      // todo this is bad
+      private def getRouteMacroParam(params: List[Tree], pos: Int, default: Tree): Tree =
+        if (params.isDefinedAt(pos)) params(pos) else default
 
       val streamConstraints: List[Tree] = List(q"F: _root_.cats.effect.Sync[$F]")
 
@@ -628,6 +633,8 @@ object serviceImpl {
       )
 
       val httpRoutesCases: Seq[Tree] = operations.map(_.toRouteTree)
+
+      println(s"*** $httpRoutesCases")
 
       val routesPF: Tree = q"{ case ..$httpRoutesCases }"
 
@@ -659,7 +666,7 @@ object serviceImpl {
 
       val httpService = q"""
         def route[$F_](implicit ..$arguments): _root_.higherkindness.mu.http.protocol.RouteMap[F] = {
-          _root_.higherkindness.mu.http.protocol.RouteMap[F](${serviceDef.name.toString}, new $HttpRestService[$F].service)
+          _root_.higherkindness.mu.http.protocol.RouteMap[F](new $HttpRestService[$F].service)
       }"""
 
       val http =
@@ -710,12 +717,6 @@ object serviceImpl {
             ) ++ service.http
           )
         )
-
-        if (service.httpRequests.nonEmpty) {
-          println(service)
-          println("#######################")
-          println(enrichedCompanion.toString)
-        }
 
         List(serviceDef, enrichedCompanion)
       case _ => sys.error("@service-annotated definition must be a trait or abstract class")

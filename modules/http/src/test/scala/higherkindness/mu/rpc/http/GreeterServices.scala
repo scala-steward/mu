@@ -16,8 +16,8 @@
 
 package higherkindness.mu.rpc.http
 
-import higherkindness.mu.rpc.protocol._
 import higherkindness.mu.http.protocol._
+import higherkindness.mu.rpc.protocol._
 import org.http4s.Method._
 
 @message final case class HelloRequest(hello: String)
@@ -28,31 +28,6 @@ import org.http4s.Method._
 
 @service(Avro) trait UnaryGreeter[F[_]] {
 
-  @http(GET, "", "") def getHello(request: Empty.type): F[HelloResponse]
-
-  @http(OPTIONS, "", "") def optionsHello(request: Empty.type): F[HelloResponse]
-
-  @http(HEAD, "", "") def headHello(request: Empty.type): F[EmptyResponse]
-
-  @http(TRACE, "", "") def traceHello(request: Empty.type): F[EmptyResponse]
-
-  @http(CONNECT, "", "") def connectHello(request: Empty.type): F[HelloResponse]
-
-  @http(PUT, "", "") def putHello(request: HelloRequest): F[EmptyResponse]
-
-  @http(PATCH, "", "") def patchHello(request: HelloRequest): F[EmptyResponse]
-
-  @http(DELETE, "", "") def deleteHello(request: HelloRequest): F[HelloResponse]
-
-  @http(POST, "", "") def sayHello(request: HelloRequest): F[HelloResponse]
-}
-
-import fs2.Stream
-@service(Avro) trait Fs2Greeter[F[_]] {
-
-  @http(POST, "", "") def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse]
-
-  @http(POST, "", "") def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse]
-
-  @http(POST, "", "") def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse]
+  @http4s(GET, MuPath(MuPathSegment("hello"), MuPathMatcher))
+  def getHello(request: Empty.type): F[HelloResponse]
 }

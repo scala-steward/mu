@@ -17,56 +17,12 @@
 package higherkindness.mu.rpc.http
 
 import cats.{Applicative, MonadError}
-import cats.effect._
 
 class UnaryGreeterHandler[F[_]: Applicative](implicit F: MonadError[F, Throwable])
     extends UnaryGreeter[F] {
 
   import cats.syntax.applicative._
   import higherkindness.mu.rpc.protocol.Empty
-  import io.grpc.Status._
 
   def getHello(request: Empty.type): F[HelloResponse] = HelloResponse("hey").pure
-
-  def optionsHello(request: Empty.type): F[HelloResponse] = HelloResponse("Options: Hey").pure
-
-  def headHello(request: Empty.type): F[EmptyResponse] = EmptyResponse().pure
-
-  def traceHello(request: Empty.type): F[EmptyResponse] = EmptyResponse().pure
-
-  def putHello(request: HelloRequest): F[EmptyResponse] = EmptyResponse().pure
-
-  def patchHello(request: HelloRequest): F[EmptyResponse] = EmptyResponse().pure
-
-  def connectHello(request: Empty.type): F[HelloResponse] = HelloResponse("Connect: Hey").pure
-
-  def deleteHello(request: HelloRequest): F[HelloResponse] = HelloResponse("Delete: Hey").pure
-
-  def sayHello(request: HelloRequest): F[HelloResponse] = request.hello match {
-    case "SE"  => F.raiseError(INVALID_ARGUMENT.withDescription("SE").asException)
-    case "SRE" => F.raiseError(INVALID_ARGUMENT.withDescription("SRE").asRuntimeException)
-    case "RTE" => F.raiseError(new IllegalArgumentException("RTE"))
-    case "TR"  => throw new IllegalArgumentException("Thrown")
-    case other => HelloResponse(other).pure
-  }
-
-}
-
-class Fs2GreeterHandler[F[_]: Sync] extends Fs2Greeter[F] {
-
-  import fs2.Stream
-
-  def sayHellos(requests: Stream[F, HelloRequest]): F[HelloResponse] =
-    requests.compile.fold(HelloResponse("")) {
-      case (response, request) =>
-        HelloResponse(
-          if (response.hello.isEmpty) request.hello else s"${response.hello}, ${request.hello}")
-    }
-
-  def sayHelloAll(request: HelloRequest): Stream[F, HelloResponse] =
-    if (request.hello.isEmpty) Stream.raiseError(new IllegalArgumentException("empty greeting"))
-    else Stream(HelloResponse(request.hello), HelloResponse(request.hello))
-
-  def sayHellosAll(requests: Stream[F, HelloRequest]): Stream[F, HelloResponse] =
-    requests.map(request => HelloResponse(request.hello))
 }

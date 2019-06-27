@@ -18,16 +18,22 @@ package higherkindness.mu.http
 package protocol
 
 import cats.effect.{ConcurrentEffect, Timer}
-import org.http4s.{HttpRoutes, Method}
-import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.implicits._
 import org.http4s.server.Router
+import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.{HttpRoutes, Method}
 
 import scala.annotation.StaticAnnotation
 
-class http(method: Method, prefix: String, operation: String) extends StaticAnnotation
+sealed trait MuPathPart
+case class MuPathSegment(name: String) extends MuPathPart
+case object MuPathMatcher              extends MuPathPart
 
-case class RouteMap[F[_]](prefix: String, route: HttpRoutes[F])
+case class MuPath(parts: MuPathPart*)
+
+class http4s(method: Method, path: MuPath) extends StaticAnnotation
+
+case class RouteMap[F[_]](route: HttpRoutes[F])
 
 object HttpServer {
 
@@ -37,6 +43,6 @@ object HttpServer {
       routes: RouteMap[F]*): BlazeServerBuilder[F] =
     BlazeServerBuilder[F]
       .bindHttp(port, host)
-      .withHttpApp(Router(routes.map(r => (s"/${r.prefix}", r.route)): _*).orNotFound)
+      .withHttpApp(Router(routes.map(r => ("/", r.route)): _*).orNotFound)
 
 }
