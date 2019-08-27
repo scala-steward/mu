@@ -44,7 +44,7 @@ object ProjectPlugin extends AutoPlugin {
       val monocle: String            = "1.5.1-cats"
       val nettySSL: String           = "2.0.20.Final"
       val paradise: String           = "2.1.1"
-      val pbdirect: String           = "0.2.1"
+      val pbdirect: String           = "0.2.2-SNAPSHOT"
       val prometheus: String         = "0.6.0"
       val pureconfig: String         = "0.10.2"
       val reactiveStreams: String    = "1.0.2"
@@ -56,6 +56,7 @@ object ProjectPlugin extends AutoPlugin {
       val skeuomorph: String         = "0.0.11"
       val slf4j: String              = "1.7.26"
       val dropwizard: String         = "4.0.5"
+      val fs2Kafka: String           = "0.20.0-RC2-SNAPSHOT"
     }
 
     lazy val commonSettings: Seq[Def.Setting[_]] = Seq(
@@ -207,6 +208,12 @@ object ProjectPlugin extends AutoPlugin {
         "io.higherkindness" %% "skeuomorph"      % V.skeuomorph,
         "com.julianpeeters" %% "avrohugger-core" % V.avrohugger,
         %%("circe-generic", V.circe)
+      )
+    )
+
+    lazy val kafkaSettings: Seq[Def.Setting[_]] = Seq(
+      libraryDependencies ++= Seq(
+        "com.ovoenergy" %% "fs2-kafka" % V.fs2Kafka
       )
     )
 
