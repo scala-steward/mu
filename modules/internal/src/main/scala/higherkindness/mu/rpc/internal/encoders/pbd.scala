@@ -27,9 +27,7 @@ import io.grpc.MethodDescriptor.Marshaller
 
 object pbd
     extends OptionInstances
-    with OptionInstancesBinCompat0
-    with ListInstances
-    with ListInstancesBinCompat0 {
+    with ListInstances {
 
   import pbdirect._
 
